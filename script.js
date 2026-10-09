@@ -12,6 +12,7 @@ const siteFrame = document.getElementById("site-frame");
 const siteShot = document.getElementById("site-shot");
 const siteFallback = document.getElementById("site-fallback");
 const siteLink = document.getElementById("site-link");
+let requestId = 0;
 
 function showMessage(text, kind) {
   msg.className = kind === "error"
@@ -25,9 +26,7 @@ function youtubeId(url) {
     const parsed = new URL(url);
     const host = parsed.hostname.replace(/^www\./, "");
     if (host === "youtu.be") return parsed.pathname.split("/").filter(Boolean)[0] || "";
-    if (host === "youtube.com" || host === "m.youtube.com" || host === "music.youtube.com") {
-      return parsed.searchParams.get("v") || "";
-    }
+    if (host.endsWith("youtube.com")) return parsed.searchParams.get("v") || "";
   } catch (error) {
     return "";
   }
@@ -45,36 +44,14 @@ function vimeoId(url) {
   }
 }
 
-function showShot(url) {
+function clearPreview() {
+  siteFrame.classList.add("hidden");
+  siteFrame.removeAttribute("src");
   siteShot.classList.add("hidden");
-  siteFallback.classList.remove("hidden");
-  siteFallback.textContent = "Loading preview...";
-  const sources = [
-    "https://image.thum.io/get/wait/8/width/1000/noanimate/" + url,
-    "https://s.wordpress.com/mshots/v1/" + encodeURIComponent(url) + "?w=1000&t=" + Date.now()
-  ];
-  let index = 0;
-  const token = url + ":" + Date.now();
-  siteShot.dataset.token = token;
-
-  function tryNext() {
-    if (siteShot.dataset.token !== token) return;
-    if (index >= sources.length) {
-      siteFallback.textContent = "Preview could not be loaded. The video player is shown when the site allows it.";
-      return;
-    }
-    const src = sources[index++];
-    const probe = new Image();
-    probe.onload = function () {
-      if (siteShot.dataset.token !== token) return;
-      siteShot.src = src;
-      siteShot.classList.remove("hidden");
-      siteFallback.classList.add("hidden");
-    };
-    probe.onerror = tryNext;
-    probe.src = src;
-  }
-  tryNext();
+  siteShot.removeAttribute("src");
+  siteFallback.classList.add("hidden");
+  links.innerHTML = "";
+  result.classList.add("hidden");
 }
 
 function showPreview(url, data) {
@@ -88,31 +65,32 @@ function showPreview(url, data) {
   siteName.textContent = (data && data.site) || host;
   siteIcon.src = "https://www.google.com/s2/favicons?domain=" + encodeURIComponent(parsed.hostname) + "&sz=64";
   siteLink.textContent = (data && data.page) || url;
-  siteFrame.classList.add("hidden");
-  siteFrame.removeAttribute("src");
+  clearPreview();
 
   const yt = youtubeId(url);
   const vimeo = vimeoId(url);
   if (yt) {
     siteFrame.src = "https://www.youtube-nocookie.com/embed/" + encodeURIComponent(yt);
     siteFrame.classList.remove("hidden");
-    siteShot.classList.add("hidden");
-    siteFallback.classList.add("hidden");
   } else if (vimeo) {
     siteFrame.src = "https://player.vimeo.com/video/" + encodeURIComponent(vimeo);
     siteFrame.classList.remove("hidden");
-    siteShot.classList.add("hidden");
-    siteFallback.classList.add("hidden");
+  } else if (data && data.thumbnail) {
+    siteShot.src = data.thumbnail;
+    siteShot.classList.remove("hidden");
   } else {
-    showShot(url);
+    siteFrame.src = url;
+    siteFrame.classList.remove("hidden");
   }
 
   preview.classList.remove("hidden");
-  if (data && data.title) title.textContent = data.title;
+  if (data && data.title) {
+    title.textContent = data.title;
+    result.classList.remove("hidden");
+  }
   if (data && data.thumbnail) {
     thumb.src = data.thumbnail;
     thumb.classList.remove("hidden");
-    result.classList.remove("hidden");
   }
 }
 
@@ -130,16 +108,18 @@ async function readJson(response) {
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
   const url = document.getElementById("url").value.trim();
-  result.classList.add("hidden");
-  links.innerHTML = "";
+  const current = ++requestId;
   button.disabled = true;
   button.textContent = "Looking...";
   showPreview(url);
   showMessage("Loading a preview of the source website...", "ok");
 
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 6000);
   try {
-    const previewResponse = await fetch("https://noembed.com/embed?url=" + encodeURIComponent(url));
+    const previewResponse = await fetch("https://noembed.com/embed?url=" + encodeURIComponent(url), {signal: controller.signal});
     const previewData = await readJson(previewResponse);
+    if (current !== requestId) return;
     if (previewData && !previewData.error) {
       showPreview(url, {
         site: previewData.provider_name,
@@ -152,9 +132,12 @@ form.addEventListener("submit", async (event) => {
       showMessage("Preview of the source website is ready.", "ok");
     }
   } catch (error) {
-    showMessage("Preview of the source website is ready.", "ok");
+    if (current === requestId) showMessage("Preview of the source website is ready.", "ok");
   } finally {
-    button.disabled = false;
-    button.textContent = "Find download";
+    clearTimeout(timer);
+    if (current === requestId) {
+      button.disabled = false;
+      button.textContent = "Find download";
+    }
   }
 });
