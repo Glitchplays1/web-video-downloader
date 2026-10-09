@@ -25,7 +25,9 @@ function youtubeId(url) {
     const parsed = new URL(url);
     const host = parsed.hostname.replace(/^www\./, "");
     if (host === "youtu.be") return parsed.pathname.split("/").filter(Boolean)[0] || "";
-    if (host === "youtube.com" || host === "m.youtube.com") return parsed.searchParams.get("v") || "";
+    if (host === "youtube.com" || host === "m.youtube.com" || host === "music.youtube.com") {
+      return parsed.searchParams.get("v") || "";
+    }
   } catch (error) {
     return "";
   }
@@ -71,10 +73,27 @@ function showPreview(url, data) {
     siteShot.src = data.thumbnail;
     siteShot.classList.remove("hidden");
   } else {
-    siteFallback.textContent = "Preview of " + host + ". Open the link to see the full page.";
+    siteFallback.textContent = "Preview of " + host + ".";
     siteFallback.classList.remove("hidden");
   }
   preview.classList.remove("hidden");
+  if (data && data.title) title.textContent = data.title;
+  if (data && data.thumbnail) {
+    thumb.src = data.thumbnail;
+    thumb.classList.remove("hidden");
+    result.classList.remove("hidden");
+  }
+}
+
+async function readJson(response) {
+  const text = await response.text();
+  const trimmed = text.trim();
+  if (!trimmed.startsWith("{") && !trimmed.startsWith("[")) return null;
+  try {
+    return JSON.parse(trimmed);
+  } catch (error) {
+    return null;
+  }
 }
 
 form.addEventListener("submit", async (event) => {
@@ -88,35 +107,21 @@ form.addEventListener("submit", async (event) => {
   showMessage("Loading a preview of the source website...", "ok");
 
   try {
-    const response = await fetch("/api/download", {
-      method: "POST",
-      headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({url})
-    });
-    const data = await response.json();
-    if (!response.ok) throw new Error(data.error || "Could not read that link.");
-    showPreview(url, data);
-
-    title.textContent = data.title || "Video";
-    if (data.thumbnail) {
-      thumb.src = data.thumbnail;
-      thumb.classList.remove("hidden");
+    const previewResponse = await fetch("https://noembed.com/embed?url=" + encodeURIComponent(url));
+    const previewData = await readJson(previewResponse);
+    if (previewData && !previewData.error) {
+      showPreview(url, {
+        site: previewData.provider_name,
+        page: previewData.url || url,
+        title: previewData.title,
+        thumbnail: previewData.thumbnail_url
+      });
+      showMessage("Preview loaded from " + (previewData.provider_name || "the source website") + ".", "ok");
     } else {
-      thumb.classList.add("hidden");
+      showMessage("Preview loaded from the source website.", "ok");
     }
-    for (const format of data.formats || []) {
-      const link = document.createElement("a");
-      link.href = format.url;
-      link.target = "_blank";
-      link.rel = "noopener";
-      link.textContent = "Save " + format.label;
-      link.className = "rounded-xl bg-stone-900 px-3 py-2 text-center text-sm font-bold text-white";
-      links.appendChild(link);
-    }
-    result.classList.remove("hidden");
-    showMessage("This preview is from the website in your link. Choose a file if one is listed.", "ok");
   } catch (error) {
-    showMessage("Preview is ready. The file list needs the Netlify version of this site.", "ok");
+    showMessage("Preview loaded from the source website.", "ok");
   } finally {
     button.disabled = false;
     button.textContent = "Find download";
