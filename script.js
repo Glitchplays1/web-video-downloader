@@ -45,6 +45,10 @@ function vimeoId(url) {
   }
 }
 
+function pageShot(url) {
+  return "https://s.wordpress.com/mshots/v1/" + encodeURIComponent(url) + "?w=1000";
+}
+
 function showPreview(url, data) {
   let parsed;
   try {
@@ -56,10 +60,17 @@ function showPreview(url, data) {
   siteName.textContent = (data && data.site) || host;
   siteIcon.src = "https://www.google.com/s2/favicons?domain=" + encodeURIComponent(parsed.hostname) + "&sz=64";
   siteLink.textContent = (data && data.page) || url;
-  siteFrame.classList.add("hidden");
-  siteShot.classList.add("hidden");
   siteFallback.classList.add("hidden");
+  siteFrame.classList.add("hidden");
   siteFrame.removeAttribute("src");
+
+  siteShot.alt = "Preview of " + host;
+  siteShot.src = pageShot(url);
+  siteShot.classList.remove("hidden");
+  siteShot.onerror = function () {
+    siteShot.onerror = null;
+    siteShot.src = "https://image.thum.io/get/width/1000/noanimate/" + url;
+  };
 
   const yt = youtubeId(url);
   const vimeo = vimeoId(url);
@@ -69,13 +80,8 @@ function showPreview(url, data) {
   } else if (vimeo) {
     siteFrame.src = "https://player.vimeo.com/video/" + encodeURIComponent(vimeo);
     siteFrame.classList.remove("hidden");
-  } else if (data && data.thumbnail) {
-    siteShot.src = data.thumbnail;
-    siteShot.classList.remove("hidden");
-  } else {
-    siteFallback.textContent = "Preview of " + host + ".";
-    siteFallback.classList.remove("hidden");
   }
+
   preview.classList.remove("hidden");
   if (data && data.title) title.textContent = data.title;
   if (data && data.thumbnail) {
@@ -116,14 +122,22 @@ form.addEventListener("submit", async (event) => {
         title: previewData.title,
         thumbnail: previewData.thumbnail_url
       });
-      showMessage("Preview loaded from " + (previewData.provider_name || "the source website") + ".", "ok");
+      showMessage("Preview of " + (previewData.provider_name || parsedHost(url)) + " is ready.", "ok");
     } else {
-      showMessage("Preview loaded from the source website.", "ok");
+      showMessage("Preview of the source website is ready.", "ok");
     }
   } catch (error) {
-    showMessage("Preview loaded from the source website.", "ok");
+    showMessage("Preview of the source website is ready.", "ok");
   } finally {
     button.disabled = false;
     button.textContent = "Find download";
   }
 });
+
+function parsedHost(url) {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch (error) {
+    return "the source website";
+  }
+}
