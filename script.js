@@ -12,6 +12,8 @@ const siteFrame = document.getElementById("site-frame");
 const siteShot = document.getElementById("site-shot");
 const siteFallback = document.getElementById("site-fallback");
 const siteLink = document.getElementById("site-link");
+const previewVideo = document.getElementById("preview-video");
+const cornerDownload = document.getElementById("corner-download");
 let requestId = 0;
 
 function showMessage(text, kind) {
@@ -44,12 +46,20 @@ function vimeoId(url) {
   }
 }
 
+function isFile(url) {
+  return /\.(mp4|webm|ogg|mov|m4v)(\?|$)/i.test(url);
+}
+
 function clearLayers() {
   siteFrame.classList.add("hidden");
   siteFrame.removeAttribute("src");
   siteShot.classList.add("hidden");
   siteShot.removeAttribute("src");
   siteFallback.classList.add("hidden");
+  previewVideo.pause();
+  previewVideo.removeAttribute("src");
+  previewVideo.classList.add("hidden");
+  previewVideo.load();
   links.innerHTML = "";
   result.classList.add("hidden");
 }
@@ -67,9 +77,14 @@ function showPreview(url, data) {
   siteLink.textContent = (data && data.page) || url;
   clearLayers();
 
+  const fileUrl = isFile(url) ? url : "";
   const yt = youtubeId(url);
   const vimeo = vimeoId(url);
-  if (yt) {
+  if (fileUrl) {
+    previewVideo.src = fileUrl;
+    previewVideo.classList.remove("hidden");
+    previewVideo.play().catch(() => {});
+  } else if (yt) {
     siteFrame.src = "https://www.youtube-nocookie.com/embed/" + encodeURIComponent(yt);
     siteFrame.classList.remove("hidden");
   } else if (vimeo) {
@@ -105,6 +120,40 @@ async function readJson(response) {
   }
 }
 
+async function downloadPlaying() {
+  const src = previewVideo && !previewVideo.classList.contains("hidden") ? (previewVideo.currentSrc || previewVideo.src) : "";
+  if (!src) {
+    showMessage("The playing player blocks saving. Paste a direct video file link, such as one ending in .mp4, to download while it plays.", "error");
+    return;
+  }
+  const name = src.split("/").pop().split("?")[0] || "video.mp4";
+  cornerDownload.disabled = true;
+  cornerDownload.textContent = "Saving...";
+  try {
+    const response = await fetch(src);
+    if (!response.ok) throw new Error("blocked");
+    const blob = await response.blob();
+    const objectUrl = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = objectUrl;
+    link.download = name;
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(objectUrl), 2000);
+    showMessage("Download started from the playing video.", "ok");
+  } catch (error) {
+    const link = document.createElement("a");
+    link.href = src;
+    link.download = name;
+    link.target = "_blank";
+    link.rel = "noopener";
+    link.click();
+    showMessage("Opened the playing video file so you can save it.", "ok");
+  } finally {
+    cornerDownload.disabled = false;
+    cornerDownload.textContent = "Download";
+  }
+}
+
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
   const url = document.getElementById("url").value.trim();
@@ -112,7 +161,7 @@ form.addEventListener("submit", async (event) => {
   button.disabled = true;
   button.textContent = "Looking...";
   showPreview(url);
-  showMessage("Loading a preview of the source website...", "ok");
+  showMessage(isFile(url) ? "Video is playing. Use Download in the corner to save it." : "Loading a preview of the source website...", "ok");
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 6000);
@@ -127,12 +176,11 @@ form.addEventListener("submit", async (event) => {
         title: previewData.title,
         thumbnail: previewData.thumbnail_url
       });
-      showMessage("Preview of " + (previewData.provider_name || "the source website") + " is ready.", "ok");
-    } else {
-      showMessage("Preview of the source website is ready.", "ok");
     }
+    if (isFile(url)) showMessage("Video is playing. Use Download in the corner to save it.", "ok");
+    else showMessage("Preview is ready. A direct video file can be saved while it plays.", "ok");
   } catch (error) {
-    if (current === requestId) showMessage("Preview of the source website is ready.", "ok");
+    if (current === requestId && isFile(url)) showMessage("Video is playing. Use Download in the corner to save it.", "ok");
   } finally {
     clearTimeout(timer);
     if (current === requestId) {
@@ -142,17 +190,4 @@ form.addEventListener("submit", async (event) => {
   }
 });
 
-const cornerDownload = document.getElementById("corner-download");
-if (cornerDownload) {
-  cornerDownload.addEventListener("click", (event) => {
-    event.preventDefault();
-    const url = document.getElementById("url").value.trim();
-    if (!url) return;
-    const link = document.createElement("a");
-    link.href = url;
-    link.target = "_blank";
-    link.rel = "noopener";
-    link.download = "";
-    link.click();
-  });
-}
+cornerDownload.addEventListener("click", downloadPlaying);
