@@ -45,8 +45,36 @@ function vimeoId(url) {
   }
 }
 
-function pageShot(url) {
-  return "https://s.wordpress.com/mshots/v1/" + encodeURIComponent(url) + "?w=1000";
+function showShot(url) {
+  siteShot.classList.add("hidden");
+  siteFallback.classList.remove("hidden");
+  siteFallback.textContent = "Loading preview...";
+  const sources = [
+    "https://image.thum.io/get/wait/8/width/1000/noanimate/" + url,
+    "https://s.wordpress.com/mshots/v1/" + encodeURIComponent(url) + "?w=1000&t=" + Date.now()
+  ];
+  let index = 0;
+  const token = url + ":" + Date.now();
+  siteShot.dataset.token = token;
+
+  function tryNext() {
+    if (siteShot.dataset.token !== token) return;
+    if (index >= sources.length) {
+      siteFallback.textContent = "Preview could not be loaded. The video player is shown when the site allows it.";
+      return;
+    }
+    const src = sources[index++];
+    const probe = new Image();
+    probe.onload = function () {
+      if (siteShot.dataset.token !== token) return;
+      siteShot.src = src;
+      siteShot.classList.remove("hidden");
+      siteFallback.classList.add("hidden");
+    };
+    probe.onerror = tryNext;
+    probe.src = src;
+  }
+  tryNext();
 }
 
 function showPreview(url, data) {
@@ -60,26 +88,23 @@ function showPreview(url, data) {
   siteName.textContent = (data && data.site) || host;
   siteIcon.src = "https://www.google.com/s2/favicons?domain=" + encodeURIComponent(parsed.hostname) + "&sz=64";
   siteLink.textContent = (data && data.page) || url;
-  siteFallback.classList.add("hidden");
   siteFrame.classList.add("hidden");
   siteFrame.removeAttribute("src");
-
-  siteShot.alt = "Preview of " + host;
-  siteShot.src = pageShot(url);
-  siteShot.classList.remove("hidden");
-  siteShot.onerror = function () {
-    siteShot.onerror = null;
-    siteShot.src = "https://image.thum.io/get/width/1000/noanimate/" + url;
-  };
 
   const yt = youtubeId(url);
   const vimeo = vimeoId(url);
   if (yt) {
     siteFrame.src = "https://www.youtube-nocookie.com/embed/" + encodeURIComponent(yt);
     siteFrame.classList.remove("hidden");
+    siteShot.classList.add("hidden");
+    siteFallback.classList.add("hidden");
   } else if (vimeo) {
     siteFrame.src = "https://player.vimeo.com/video/" + encodeURIComponent(vimeo);
     siteFrame.classList.remove("hidden");
+    siteShot.classList.add("hidden");
+    siteFallback.classList.add("hidden");
+  } else {
+    showShot(url);
   }
 
   preview.classList.remove("hidden");
@@ -122,7 +147,7 @@ form.addEventListener("submit", async (event) => {
         title: previewData.title,
         thumbnail: previewData.thumbnail_url
       });
-      showMessage("Preview of " + (previewData.provider_name || parsedHost(url)) + " is ready.", "ok");
+      showMessage("Preview of " + (previewData.provider_name || "the source website") + " is ready.", "ok");
     } else {
       showMessage("Preview of the source website is ready.", "ok");
     }
@@ -133,11 +158,3 @@ form.addEventListener("submit", async (event) => {
     button.textContent = "Find download";
   }
 });
-
-function parsedHost(url) {
-  try {
-    return new URL(url).hostname.replace(/^www\./, "");
-  } catch (error) {
-    return "the source website";
-  }
-}
