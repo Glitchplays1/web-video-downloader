@@ -148,7 +148,7 @@ async function downloadPlaying() {
     showMessage("No video file was found to save from the playing preview.", "error");
     return;
   }
-  const name = src.split("/").pop().split("?")[0] || "video.mp4";
+  const name = (src.split("/").pop().split("?")[0] || "video.mp4").replace(/[^A-Za-z0-9._-]/g, "") || "video.mp4";
   cornerDownload.disabled = true;
   cornerDownload.textContent = "Saving...";
   try {
@@ -159,17 +159,19 @@ async function downloadPlaying() {
     const link = document.createElement("a");
     link.href = objectUrl;
     link.download = name;
+    document.body.appendChild(link);
     link.click();
-    setTimeout(() => URL.revokeObjectURL(objectUrl), 2000);
-    showMessage("Download started from the playing video.", "ok");
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(objectUrl), 4000);
+    showMessage("The video file is saving to your computer, usually in Downloads.", "ok");
   } catch (error) {
     const link = document.createElement("a");
     link.href = src;
     link.download = name;
-    link.target = "_blank";
-    link.rel = "noopener";
+    document.body.appendChild(link);
     link.click();
-    showMessage("Opened the playing video file so you can save it.", "ok");
+    link.remove();
+    showMessage("Your browser is saving the video file to your computer.", "ok");
   } finally {
     cornerDownload.disabled = false;
     cornerDownload.textContent = "Download";
