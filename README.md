@@ -1,39 +1,23 @@
 # Web Video Downloader
 
-A small web form that saves a video from a link you paste in. It runs on your computer and uses [yt-dlp](https://github.com/yt-dlp/yt-dlp).
+Live page: https://glitchplays1.github.io/web-video-downloader/
 
-**Only download videos you made, own, or have permission to save.** Respect copyright and each site's rules. This project does not bypass paywalls or copy protection.
+GitHub Pages can only show a website. It cannot save videos from YouTube and most other sites, because those sites block browsers. The computer app below does that part.
 
-## What you need
+Only save videos you made or have permission to save.
 
-- Python 3.10 or newer
-- FFmpeg (used to join video and audio into one file)
+## Run the downloader on your computer
 
-Install FFmpeg:
+1. Install Python from https://www.python.org/downloads/ (check "Add Python to PATH").
+2. Install FFmpeg: `winget install Gyan.FFmpeg`
+3. Double-click `run.bat`.
+4. Open http://127.0.0.1:5000 and paste a video link.
 
-- Windows: `winget install Gyan.FFmpeg`
-- macOS: `brew install ffmpeg`
-- Linux: `sudo apt install ffmpeg`
-
-## Run it
+On Mac or Linux:
 
 ```bash
-python -m venv .venv
-# Windows
-.venv\Scripts\activate
-# macOS / Linux
+python3 -m venv .venv
 source .venv/bin/activate
-
 pip install -r requirements.txt
 python app.py
 ```
-
-Open http://127.0.0.1:5000 , paste a video link, and click Download.
-
-The app only accepts one video at a time (playlists are skipped) and refuses files larger than 500 MB.
-
-## Files
-
-- `app.py` — Flask server
-- `templates/index.html` — the form page
-- `requirements.txt` — Python packages

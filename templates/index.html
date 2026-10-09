@@ -5,52 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Video Downloader</title>
   <style>
-    :root { color-scheme: light dark; }
-    body {
-      margin: 0;
-      min-height: 100vh;
-      display: grid;
-      place-items: center;
-      font-family: Georgia, "Times New Roman", serif;
-      background: #f4efe6;
-      color: #1d1a16;
-    }
-    main {
-      width: min(520px, calc(100% - 32px));
-      background: #fffdf8;
-      border: 1px solid #e4d8c4;
-      border-radius: 16px;
-      padding: 28px;
-      box-shadow: 0 10px 30px rgba(60, 40, 10, 0.08);
-    }
-    h1 { margin: 0 0 8px; font-size: 1.8rem; }
-    p { line-height: 1.45; }
+    body { margin: 0; min-height: 100vh; display: grid; place-items: center; font-family: Georgia, serif; background: #f4efe6; color: #1d1a16; }
+    main { width: min(520px, calc(100% - 32px)); background: #fffdf8; border: 1px solid #e4d8c4; border-radius: 16px; padding: 28px; }
+    h1 { margin: 0 0 8px; }
     label { display: block; font-weight: 700; margin: 16px 0 6px; }
-    input, select, button {
-      width: 100%;
-      box-sizing: border-box;
-      font: inherit;
-      border-radius: 10px;
-    }
-    input, select {
-      border: 1px solid #cbbba3;
-      padding: 12px;
-      background: #fff;
-    }
-    button {
-      margin-top: 18px;
-      border: 0;
-      padding: 12px;
-      background: #2f6f4e;
-      color: white;
-      cursor: pointer;
-    }
-    button:hover { background: #24583e; }
-    .note, .error {
-      border-radius: 10px;
-      padding: 10px 12px;
-      font-size: 0.95rem;
-    }
+    input, select, button { width: 100%; box-sizing: border-box; font: inherit; border-radius: 10px; }
+    input, select { border: 1px solid #cbbba3; padding: 12px; background: #fff; }
+    button { margin-top: 18px; border: 0; padding: 12px; background: #2f6f4e; color: white; cursor: pointer; }
+    .note, .error { border-radius: 10px; padding: 10px 12px; }
     .note { background: #f7f1e6; }
     .error { background: #fde8e4; color: #8a2b1d; }
   </style>
@@ -58,14 +20,14 @@
 <body>
   <main>
     <h1>Video downloader</h1>
-    <p class="note">Paste a link to a video you made or have permission to save. This page runs on your computer.</p>
+    <p class="note">Paste a link to a video you made or have permission to save. This page is running on your computer.</p>
     {% if error %}<p class="error">{{ error }}</p>{% endif %}
     <form action="/download" method="post">
       <label for="url">Video link</label>
-      <input id="url" name="url" type="url" required placeholder="https://example.com/watch?v=..." autocomplete="off">
+      <input id="url" name="url" type="url" required placeholder="https://example.com/watch?v=...">
       <label for="mode">Save as</label>
       <select id="mode" name="mode">
-        <option value="video">Video (MP4 when possible)</option>
+        <option value="video">Video</option>
         <option value="audio">Audio only</option>
       </select>
       <button type="submit">Download</button>
