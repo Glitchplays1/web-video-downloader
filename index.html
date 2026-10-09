@@ -39,6 +39,7 @@
         <iframe id="site-frame" title="Preview of the source website" class="absolute inset-0 z-10 hidden h-full w-full" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
         <img id="site-shot" alt="Preview from the source website" class="absolute inset-0 hidden h-full w-full object-cover object-top">
         <p id="site-fallback" class="hidden p-4 text-sm text-neutral-600">Loading preview...</p>
+        <a id="corner-download" href="#" class="absolute right-3 top-3 z-20 rounded-md bg-green-500 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-green-600">Download</a>
       </div>
       <p id="site-link" class="truncate px-3 py-2 text-xs text-neutral-500"></p>
     </section>
@@ -69,7 +70,7 @@
       <button type="button" data-site="https://www.dailymotion.com" class="site hover:text-neutral-800">dailymotion.com</button>
     </div>
   </main>
-  <script src="script.js?v=9"></script>
+  <script src="script.js?v=10"></script>
   <script>
     document.querySelectorAll(".site").forEach((button) => {
       button.addEventListener("click", () => {

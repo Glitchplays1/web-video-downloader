@@ -141,3 +141,18 @@ form.addEventListener("submit", async (event) => {
     }
   }
 });
+
+const cornerDownload = document.getElementById("corner-download");
+if (cornerDownload) {
+  cornerDownload.addEventListener("click", (event) => {
+    event.preventDefault();
+    const url = document.getElementById("url").value.trim();
+    if (!url) return;
+    const link = document.createElement("a");
+    link.href = url;
+    link.target = "_blank";
+    link.rel = "noopener";
+    link.download = "";
+    link.click();
+  });
+}
