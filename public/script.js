@@ -120,10 +120,32 @@ async function readJson(response) {
   }
 }
 
+async function findFile(url) {
+  if (isFile(url)) return url;
+  try {
+    const response = await fetch("https://api.allorigins.win/raw?url=" + encodeURIComponent(url));
+    const html = await response.text();
+    const match = html.match(/https?:[^"'\\s>]+\.(mp4|webm|ogg|mov|m4v)(\?[^"'\\s>]*)?/i);
+    return match ? match[0].replace(/&/g, "&") : "";
+  } catch (error) {
+    return "";
+  }
+}
+
 async function downloadPlaying() {
-  const src = previewVideo && !previewVideo.classList.contains("hidden") ? (previewVideo.currentSrc || previewVideo.src) : "";
+  let src = previewVideo && !previewVideo.classList.contains("hidden") ? (previewVideo.currentSrc || previewVideo.src) : "";
   if (!src) {
-    showMessage("The playing player blocks saving. Paste a direct video file link, such as one ending in .mp4, to download while it plays.", "error");
+    const page = document.getElementById("url").value.trim();
+    src = await findFile(page);
+    if (src) {
+      previewVideo.src = src;
+      previewVideo.classList.remove("hidden");
+      siteFrame.classList.add("hidden");
+      previewVideo.play().catch(() => {});
+    }
+  }
+  if (!src) {
+    showMessage("No video file was found to save from the playing preview.", "error");
     return;
   }
   const name = src.split("/").pop().split("?")[0] || "video.mp4";
