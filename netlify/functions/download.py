@@ -61,6 +61,8 @@ def handler(event, context):
     return _resp(200, {
         "title": info.get("title") or "Video",
         "thumbnail": info.get("thumbnail") or "",
+        "site": info.get("extractor") or "",
+        "page": info.get("webpage_url") or url,
         "formats": formats,
     })
 

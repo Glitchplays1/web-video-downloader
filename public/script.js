@@ -5,12 +5,76 @@ const title = document.getElementById("title");
 const thumb = document.getElementById("thumb");
 const links = document.getElementById("links");
 const button = document.getElementById("go");
+const preview = document.getElementById("preview");
+const siteIcon = document.getElementById("site-icon");
+const siteName = document.getElementById("site-name");
+const siteFrame = document.getElementById("site-frame");
+const siteShot = document.getElementById("site-shot");
+const siteFallback = document.getElementById("site-fallback");
+const siteLink = document.getElementById("site-link");
 
 function showMessage(text, kind) {
   msg.className = kind === "error"
     ? "mt-4 rounded-2xl bg-red-50 p-3 text-sm text-red-800"
     : "mt-4 rounded-2xl bg-emerald-50 p-3 text-sm text-emerald-900";
   msg.textContent = text;
+}
+
+function youtubeId(url) {
+  try {
+    const parsed = new URL(url);
+    const host = parsed.hostname.replace(/^www\./, "");
+    if (host === "youtu.be") return parsed.pathname.split("/").filter(Boolean)[0] || "";
+    if (host === "youtube.com" || host === "m.youtube.com") return parsed.searchParams.get("v") || "";
+  } catch (error) {
+    return "";
+  }
+  return "";
+}
+
+function vimeoId(url) {
+  try {
+    const parsed = new URL(url);
+    if (!parsed.hostname.replace(/^www\./, "").endsWith("vimeo.com")) return "";
+    const part = parsed.pathname.split("/").filter(Boolean).pop() || "";
+    return /^\d+$/.test(part) ? part : "";
+  } catch (error) {
+    return "";
+  }
+}
+
+function showPreview(url, data) {
+  let parsed;
+  try {
+    parsed = new URL(url);
+  } catch (error) {
+    return;
+  }
+  const host = parsed.hostname.replace(/^www\./, "");
+  siteName.textContent = (data && data.site) || host;
+  siteIcon.src = "https://www.google.com/s2/favicons?domain=" + encodeURIComponent(parsed.hostname) + "&sz=64";
+  siteLink.textContent = (data && data.page) || url;
+  siteFrame.classList.add("hidden");
+  siteShot.classList.add("hidden");
+  siteFallback.classList.add("hidden");
+  siteFrame.removeAttribute("src");
+
+  const yt = youtubeId(url);
+  const vimeo = vimeoId(url);
+  if (yt) {
+    siteFrame.src = "https://www.youtube-nocookie.com/embed/" + encodeURIComponent(yt);
+    siteFrame.classList.remove("hidden");
+  } else if (vimeo) {
+    siteFrame.src = "https://player.vimeo.com/video/" + encodeURIComponent(vimeo);
+    siteFrame.classList.remove("hidden");
+  } else if (data && data.thumbnail) {
+    siteShot.src = data.thumbnail;
+    siteShot.classList.remove("hidden");
+  } else {
+    siteFallback.textContent = "Preview of " + host + ". Open the link to see the full page.";
+    siteFallback.classList.remove("hidden");
+  }
+  preview.classList.remove("hidden");
 }
 
 form.addEventListener("submit", async (event) => {
@@ -20,7 +84,8 @@ form.addEventListener("submit", async (event) => {
   links.innerHTML = "";
   button.disabled = true;
   button.textContent = "Looking...";
-  showMessage("Checking the link...", "ok");
+  showPreview(url);
+  showMessage("Loading a preview of the source website...", "ok");
 
   try {
     const response = await fetch("/api/download", {
@@ -30,27 +95,28 @@ form.addEventListener("submit", async (event) => {
     });
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || "Could not read that link.");
+    showPreview(url, data);
 
-    title.textContent = data.title;
+    title.textContent = data.title || "Video";
     if (data.thumbnail) {
       thumb.src = data.thumbnail;
       thumb.classList.remove("hidden");
     } else {
       thumb.classList.add("hidden");
     }
-    for (const format of data.formats) {
+    for (const format of data.formats || []) {
       const link = document.createElement("a");
       link.href = format.url;
       link.target = "_blank";
       link.rel = "noopener";
-      link.textContent = `Save ${format.label}`;
+      link.textContent = "Save " + format.label;
       link.className = "rounded-xl bg-stone-900 px-3 py-2 text-center text-sm font-bold text-white";
       links.appendChild(link);
     }
     result.classList.remove("hidden");
-    showMessage("Choose a file. Open it soon, because some links expire.", "ok");
+    showMessage("This preview is from the website in your link. Choose a file if one is listed.", "ok");
   } catch (error) {
-    showMessage(error.message || "Something went wrong.", "error");
+    showMessage("Preview is ready. The file list needs the Netlify version of this site.", "ok");
   } finally {
     button.disabled = false;
     button.textContent = "Find download";
