@@ -44,7 +44,7 @@ function vimeoId(url) {
   }
 }
 
-function clearPreview() {
+function clearLayers() {
   siteFrame.classList.add("hidden");
   siteFrame.removeAttribute("src");
   siteShot.classList.add("hidden");
@@ -65,7 +65,7 @@ function showPreview(url, data) {
   siteName.textContent = (data && data.site) || host;
   siteIcon.src = "https://www.google.com/s2/favicons?domain=" + encodeURIComponent(parsed.hostname) + "&sz=64";
   siteLink.textContent = (data && data.page) || url;
-  clearPreview();
+  clearLayers();
 
   const yt = youtubeId(url);
   const vimeo = vimeoId(url);
