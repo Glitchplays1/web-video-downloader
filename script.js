@@ -148,30 +148,45 @@ async function downloadPlaying() {
     showMessage("No video file was found to save from the playing preview.", "error");
     return;
   }
-  const name = (src.split("/").pop().split("?")[0] || "video.mp4").replace(/[^A-Za-z0-9._-]/g, "") || "video.mp4";
+  const name = (src.split("/").pop().split("?")[0] || "my-video.mp4").replace(/[^A-Za-z0-9._-]/g, "") || "my-video.mp4";
   cornerDownload.disabled = true;
   cornerDownload.textContent = "Saving...";
   try {
     const response = await fetch(src);
     if (!response.ok) throw new Error("blocked");
     const blob = await response.blob();
-    const objectUrl = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = objectUrl;
-    link.download = name;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    setTimeout(() => URL.revokeObjectURL(objectUrl), 4000);
-    showMessage("The video file is saving to your computer, usually in Downloads.", "ok");
+    if (window.showSaveFilePicker) {
+      const handle = await window.showSaveFilePicker({
+        suggestedName: name,
+        types: [{ description: "Video", accept: { "video/mp4": [".mp4"], "video/webm": [".webm"] } }]
+      });
+      const writable = await handle.createWritable();
+      await writable.write(blob);
+      await writable.close();
+      showMessage("Saved " + name + " on your computer.", "ok");
+    } else {
+      const objectUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = objectUrl;
+      link.download = name;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(objectUrl), 4000);
+      showMessage("Saving " + name + " to your Downloads folder.", "ok");
+    }
   } catch (error) {
-    const link = document.createElement("a");
-    link.href = src;
-    link.download = name;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    showMessage("Your browser is saving the video file to your computer.", "ok");
+    if (error && error.name === "AbortError") {
+      showMessage("Save canceled.", "ok");
+    } else {
+      const link = document.createElement("a");
+      link.href = src;
+      link.download = name;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      showMessage("Check your Downloads folder for the video file.", "ok");
+    }
   } finally {
     cornerDownload.disabled = false;
     cornerDownload.textContent = "Download";
@@ -215,3 +230,4 @@ form.addEventListener("submit", async (event) => {
 });
 
 cornerDownload.addEventListener("click", downloadPlaying);
+button.addEventListener("click", () => setTimeout(downloadPlaying, 400));
